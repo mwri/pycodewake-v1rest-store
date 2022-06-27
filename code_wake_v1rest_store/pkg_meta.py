@@ -23,7 +23,7 @@ entry_points: Dict[str, Any] = {
 python_requires = ">=3.6"
 install_requires = [
     "code-wake~=0.0.4",
-    "requests~=2.0.0",
+    "requests==2.28.0",
 ]
 
 extras_require = {
