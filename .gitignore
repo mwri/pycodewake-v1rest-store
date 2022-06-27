@@ -2,7 +2,7 @@
 /.vscode
 /build
 /dist
-/pycodewake_v1rest_store.egg-info/
+/code_wake_v1rest_store.egg-info/
 __pycache__/
 /venv
 /coverage.xml
