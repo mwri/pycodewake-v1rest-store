@@ -4,7 +4,7 @@ import sys
 from typing import Any, Dict
 
 name = "code-wake-v1rest-store"
-version = "0.0.1"
+version = "0.0.2"
 author = "Michael Wright"
 author_email = "mjw@methodanalysis.com"
 description = "Code Wake V1 REST API store adapter"
