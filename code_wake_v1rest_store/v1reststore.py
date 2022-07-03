@@ -318,6 +318,7 @@ class V1RestStore:
         inc_st: bool = None,
         st_len: Optional[int] = None,
         st_data: Optional[List[str, int, str]] = None,
+        when_ts: float = None,
         sync: bool = False,
     ) -> Optional[V1RestStore.Event]:
         with self.session() as session:
@@ -339,6 +340,7 @@ class V1RestStore:
                     "process_id": op_process.id,
                     "stacktrace": st.data() if inc_st else None,
                     "data": data,
+                    "when_ts": when_ts,
                 },
             )
 
