@@ -318,7 +318,8 @@ class V1RestStore:
         inc_st: bool = None,
         st_len: Optional[int] = None,
         st_data: Optional[List[str, int, str]] = None,
-    ) -> V1RestStore.Event:
+        sync: bool = False,
+    ) -> Optional[V1RestStore.Event]:
         with self.session() as session:
             if inc_st is None:
                 inc_st = Config()["stacktraces"]["include"]["for_non_exceptions" if exc is None else "from_exceptions"]
@@ -333,41 +334,49 @@ class V1RestStore:
 
             res = session.post(
                 f"{self._base_url}/events",
+                query_string={"sync": "true" if sync else "false"},
                 json={
                     "process_id": op_process.id,
                     "stacktrace": st.data() if inc_st else None,
                     "data": data,
                 },
             )
-            if res.status_code != 201:
-                self.req_res_raise(res, "creating event")
 
-            stacktrace = None
-            if inc_st:
-                stacktrace = V1RestStore.Stacktrace(
-                    id=res.json["stacktrace"]["id"],
-                    digest=res.json["stacktrace"]["digest"],
-                    stackframes=[
-                        V1RestStore.Stackframe(
-                            stacktrace_id=res.json["stacktrace"]["id"],
-                            filename=sf[0],
-                            lineno=sf[1],
-                            src=sf[2],
-                        )
-                        for sf in reversed(st.data())
-                    ],
+            event_record = None
+
+            if sync:
+                if res.status_code != 201:
+                    self.req_res_raise(res, "creating event")
+
+                stacktrace = None
+                if inc_st:
+                    stacktrace = V1RestStore.Stacktrace(
+                        id=res.json["stacktrace"]["id"],
+                        digest=res.json["stacktrace"]["digest"],
+                        stackframes=[
+                            V1RestStore.Stackframe(
+                                stacktrace_id=res.json["stacktrace"]["id"],
+                                filename=sf[0],
+                                lineno=sf[1],
+                                src=sf[2],
+                            )
+                            for sf in reversed(st.data())
+                        ],
+                    )
+
+                event_record = V1RestStore.Event(
+                    store=self,
+                    id=res.json["id"],
+                    when_ts=res.json["when_ts"],
+                    process_id=op_process.id,
+                    digest=res.json["digest"],
+                    stacktrace_id=None if res.json["stacktrace"] is None else res.json["stacktrace"]["id"],
+                    stacktrace=stacktrace,
+                    data=None if data is None else [V1RestStore.EventData(key=key, val=val) for key, val in data],
                 )
-
-            return V1RestStore.Event(
-                store=self,
-                id=res.json["id"],
-                when_ts=res.json["when_ts"],
-                process_id=op_process.id,
-                digest=res.json["digest"],
-                stacktrace_id=None if res.json["stacktrace"] is None else res.json["stacktrace"]["id"],
-                stacktrace=stacktrace,
-                data=None if data is None else [V1RestStore.EventData(key=key, val=val) for key, val in data],
-            )
+            else:
+                if res.status_code != 202:
+                    self.req_res_raise(res, "creating event")
 
             return event_record
 
