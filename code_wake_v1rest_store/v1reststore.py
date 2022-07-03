@@ -142,8 +142,8 @@ class V1RestStore:
             self.id = id
             self.vsn = vsn
 
-    def __repr__(self):
-        return f"<V1RestStore.AppVsn(id='{self.id}')>"
+        def __repr__(self):
+            return f"<V1RestStore.AppVsn(id='{self.id}')>"
 
     class Event(Base):
         def __init__(self, store, id, when_ts, process_id, digest, stacktrace_id, stacktrace, data):
