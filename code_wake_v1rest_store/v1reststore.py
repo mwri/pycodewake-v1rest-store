@@ -382,11 +382,16 @@ class V1RestStore:
 
             return event_record
 
-    def get_events_by_data(self, where: Iterable[Tuple[str, str]]) -> List[V1RestStore.Event]:
+    def get_events_by_data(
+        self, where: Iterable[Tuple[str, str]], process_id: Optional[str] = None
+    ) -> List[V1RestStore.Event]:
         with self.session() as session:
-            res = session.get(
-                f"{self._base_url}/events", query_string={"where": ",".join(f"{k}={v}" for k, v in where)}
-            )
+            qs_params = {"where": ",".join(f"{k}={v}" for k, v in where)}
+
+            if process_id is not None:
+                qs_params["process_id"] = process_id
+
+            res = session.get(f"{self._base_url}/events", query_string=qs_params)
 
             return [
                 V1RestStore.Event(
