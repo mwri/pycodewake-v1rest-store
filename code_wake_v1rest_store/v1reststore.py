@@ -422,3 +422,36 @@ class V1RestStore:
                 )
                 for ed in res.json
             ]
+
+    def get_processes(
+        self,
+        app_id: Optional[int] = None,
+        from_ts: Optional[float] = None,
+        to_ts: Optional[float] = None,
+    ) -> List[V1RestStore.Event]:
+        with self.session() as session:
+            qs_params = {}
+            if app_id is not None:
+                qs_params["app_id"] = app_id
+            if from_ts is not None:
+                qs_params["from_ts"] = from_ts
+            if to_ts is not None:
+                qs_params["to_ts"] = to_ts
+
+            res = session.get(f"{self._base_url}/processes", query_string=qs_params)
+
+            return [
+                V1RestStore.Process(
+                    store=self,
+                    id=pd["id"],
+                    environment_id=pd["environment_id"],
+                    run_ts=pd["run_ts"],
+                    app_id=pd["app_id"],
+                    app_vsn_id=pd["app_vsn_id"],
+                    pid=pd["pid"],
+                    username=pd["username"],
+                    fqdn=pd["fqdn"],
+                    exe_path=pd["exe_path"],
+                )
+                for pd in res.json
+            ]
