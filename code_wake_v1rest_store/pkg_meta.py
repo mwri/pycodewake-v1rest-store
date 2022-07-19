@@ -37,6 +37,7 @@ extras_require = {
         "code-wake-sql14-store~=0.3.0",
         "code-wake-v1wsgi-service~=0.2.0",
         "flask==2.1.2",
+        "requests-flask-adapter==0.1.0",
     ],
 }
 
