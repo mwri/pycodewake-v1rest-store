@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple
@@ -66,12 +67,14 @@ class V1RestStore:
                         self._environment = None
                     else:
                         if res.status_code != 200:
-                            self.req_res_raise(res, 'getting process with ID "{id}"')
+                            self._store.req_res_raise(res, 'getting process with ID "{id}"')
+
+                        json_data = res.json()
 
                         self._environment = V1RestStore.Environment(
                             store=self._store,
-                            id=res.json["id"],
-                            name=res.json["name"],
+                            id=json_data["id"],
+                            name=json_data["name"],
                         )
 
             return self._environment
@@ -90,12 +93,14 @@ class V1RestStore:
                         self._app = None
                     else:
                         if res.status_code != 200:
-                            self.req_res_raise(res, 'error getting process with ID "{id}"')
+                            self._store.req_res_raise(res, 'error getting process with ID "{id}"')
+
+                        json_data = res.json()
 
                         self._app = V1RestStore.App(
                             store=self._store,
-                            id=res.json["id"],
-                            name=res.json["name"],
+                            id=json_data["id"],
+                            name=json_data["name"],
                         )
 
             return self._app
@@ -119,10 +124,12 @@ class V1RestStore:
                         if res.status_code != 200:
                             self.req_res_raise(res, 'error getting process with ID "{id}"')
 
+                        json_data = res.json()
+
                         self._app_vsn = V1RestStore.AppVsn(
                             store=self._store,
-                            id=res.json["id"],
-                            vsn=res.json["vsn"],
+                            id=json_data["id"],
+                            vsn=json_data["vsn"],
                         )
 
             return self._app_vsn
@@ -192,22 +199,24 @@ class V1RestStore:
         self._username = username
         self._password = password
 
-    @property
     def session(self):
         s = requests.Session()
         if self._username and self._password:
             s.auth = (self._username, self._password)
-        s.headers.update({"content-type": "application/json"})
 
         return s
 
     def insert_app(self, name: str, vsn: Optional[str] = None) -> V1RestStore.App:
         with self.session() as session:
-            res = session.post(f"{self._base_url}/apps", json={"name": name, "vsn": vsn})
+            res = session.post(
+                f"{self._base_url}/apps", json={"name": name, "vsn": vsn}, headers={"content-type": "application/json"}
+            )
             if res.status_code != 201:
                 self.req_res_raise(res, 'creating app with name "{name}"')
 
-            return V1RestStore.App(store=self, id=res.json["id"], name=res.json["name"])
+            json_data = res.json()
+
+            return V1RestStore.App(store=self, id=json_data["id"], name=json_data["name"])
 
     def get_environment_by_id(self, id: int) -> Optional[V1RestStore.Environment]:
         with self.session() as session:
@@ -217,10 +226,12 @@ class V1RestStore:
             if res.status_code != 200:
                 self.req_res_raise(res, f'getting environment with ID "{id}"')
 
+            json_data = res.json()
+
             return V1RestStore.Environment(
                 store=self,
-                id=res.json["id"],
-                name=res.json["name"],
+                id=json_data["id"],
+                name=json_data["name"],
             )
 
     def get_app_by_id(self, id: int) -> Optional[V1RestStore.App]:
@@ -231,10 +242,12 @@ class V1RestStore:
             if res.status_code != 200:
                 self.req_res_raise(res, f'getting app with ID "{id}"')
 
+            json_data = res.json()
+
             return V1RestStore.Environment(
                 store=self,
-                id=res.json["id"],
-                name=res.json["name"],
+                id=json_data["id"],
+                name=json_data["name"],
             )
 
     def get_app_vsn_by_id(self, id: int) -> Optional[V1RestStore.AppVsn]:
@@ -245,10 +258,12 @@ class V1RestStore:
             if res.status_code != 200:
                 self.req_res_raise(res, f'getting app version with ID "{id}"')
 
+            json_data = res.json()
+
             return V1RestStore.Environment(
                 store=self,
-                id=res.json["id"],
-                vsn=res.json["vsn"],
+                id=json_data["id"],
+                vsn=json_data["vsn"],
             )
 
     def get_process_by_id(self, id: int) -> Optional[V1RestStore.Process]:
@@ -259,17 +274,19 @@ class V1RestStore:
             if res.status_code != 200:
                 self.req_res_raise(res, f'getting process with ID "{id}"')
 
+            json_data = res.json()
+
             return V1RestStore.Process(
                 store=self,
-                id=res.json["id"],
-                environment_id=res.json["environment_id"],
-                app_id=res.json["app_id"],
-                app_vsn_id=res.json["app_vsn_id"],
-                run_ts=res.json["run_ts"],
-                pid=res.json["pid"],
-                username=res.json["username"],
-                fqdn=res.json["fqdn"],
-                exe_path=res.json["exe_path"],
+                id=json_data["id"],
+                environment_id=json_data["environment_id"],
+                app_id=json_data["app_id"],
+                app_vsn_id=json_data["app_vsn_id"],
+                run_ts=json_data["run_ts"],
+                pid=json_data["pid"],
+                username=json_data["username"],
+                fqdn=json_data["fqdn"],
+                exe_path=json_data["exe_path"],
             )
 
     def insert_process(self, unstored_process: Process) -> V1RestStore.Process:
@@ -285,28 +302,37 @@ class V1RestStore:
                     "fqdn": unstored_process.fqdn,
                     "exe_path": unstored_process.exe_path,
                 },
+                headers={"content-type": "application/json"},
             )
             if res.status_code != 201:
                 self.req_res_raise(res, "creating process")
 
+            json_data = res.json()
+
             return self.Process(
                 store=self,
-                id=res.json["id"],
-                environment_id=res.json["environment_id"],
-                run_ts=res.json["run_ts"],
-                app_id=res.json["app_id"],
-                app_vsn_id=res.json["app_vsn_id"],
-                pid=res.json["pid"],
-                username=res.json["username"],
-                fqdn=res.json["fqdn"],
-                exe_path=res.json["exe_path"],
+                id=json_data["id"],
+                environment_id=json_data["environment_id"],
+                run_ts=json_data["run_ts"],
+                app_id=json_data["app_id"],
+                app_vsn_id=json_data["app_vsn_id"],
+                pid=json_data["pid"],
+                username=json_data["username"],
+                fqdn=json_data["fqdn"],
+                exe_path=json_data["exe_path"],
             )
 
     def req_res_raise(self, res, msg):
-        if "error" in res.json:
-            msg = res.json["error"]
-        else:
-            msg = f"error {msg}, HTTP status {res.status_code} body {repr(res.data.decode())}"
+        msg = None
+
+        try:
+            json_data = res.json()
+            if "error" in json_data:
+                msg = json_data["error"]
+            else:
+                msg = f"error {msg}, HTTP status {res.status_code} body {repr(res.data.decode())}"
+        except Exception:
+            msg = "unknown"
 
         raise Exception(f"error {msg}, HTTP status {res.status_code}")
 
@@ -335,13 +361,14 @@ class V1RestStore:
 
             res = session.post(
                 f"{self._base_url}/events",
-                query_string={"sync": "true" if sync else "false"},
+                params={"sync": "true" if sync else "false"},
                 json={
                     "process_id": op_process.id,
                     "stacktrace": st.data() if inc_st else None,
                     "data": data,
                     "when_ts": when_ts,
                 },
+                headers={"content-type": "application/json"},
             )
 
             event_record = None
@@ -350,14 +377,16 @@ class V1RestStore:
                 if res.status_code != 201:
                     self.req_res_raise(res, "creating event")
 
+                json_data = res.json()
+
                 stacktrace = None
                 if inc_st:
                     stacktrace = V1RestStore.Stacktrace(
-                        id=res.json["stacktrace"]["id"],
-                        digest=res.json["stacktrace"]["digest"],
+                        id=json_data["stacktrace"]["id"],
+                        digest=json_data["stacktrace"]["digest"],
                         stackframes=[
                             V1RestStore.Stackframe(
-                                stacktrace_id=res.json["stacktrace"]["id"],
+                                stacktrace_id=json_data["stacktrace"]["id"],
                                 filename=sf[0],
                                 lineno=sf[1],
                                 src=sf[2],
@@ -368,11 +397,11 @@ class V1RestStore:
 
                 event_record = V1RestStore.Event(
                     store=self,
-                    id=res.json["id"],
-                    when_ts=res.json["when_ts"],
+                    id=json_data["id"],
+                    when_ts=json_data["when_ts"],
                     process_id=op_process.id,
-                    digest=res.json["digest"],
-                    stacktrace_id=None if res.json["stacktrace"] is None else res.json["stacktrace"]["id"],
+                    digest=json_data["digest"],
+                    stacktrace_id=None if json_data["stacktrace"] is None else json_data["stacktrace"]["id"],
                     stacktrace=stacktrace,
                     data=None if data is None else [V1RestStore.EventData(key=key, val=val) for key, val in data],
                 )
@@ -391,7 +420,9 @@ class V1RestStore:
             if process_id is not None:
                 qs_params["process_id"] = process_id
 
-            res = session.get(f"{self._base_url}/events", query_string=qs_params)
+            res = session.get(f"{self._base_url}/events", params=qs_params)
+
+            json_data = res.json()
 
             return [
                 V1RestStore.Event(
@@ -420,7 +451,7 @@ class V1RestStore:
                     if ed["data"] is None
                     else [V1RestStore.EventData(key=key, val=val) for key, val in ed["data"]],
                 )
-                for ed in res.json
+                for ed in res.json()
             ]
 
     def get_processes(
@@ -438,7 +469,9 @@ class V1RestStore:
             if to_ts is not None:
                 qs_params["to_ts"] = to_ts
 
-            res = session.get(f"{self._base_url}/processes", query_string=qs_params)
+            res = session.get(f"{self._base_url}/processes", params=qs_params)
+
+            json_data = res.json()
 
             return [
                 V1RestStore.Process(
@@ -453,5 +486,5 @@ class V1RestStore:
                     fqdn=pd["fqdn"],
                     exe_path=pd["exe_path"],
                 )
-                for pd in res.json
+                for pd in res.json()
             ]
